@@ -173,8 +173,8 @@ runs:
           echo "REBUILD is $REBUILD"
 
           # Perform the merge-up
-          # `|| true is suffixed to the command to preven the job from stopping on merge conflict
-          # because git will sent a non-zero exit code when there is a merge conflict
+          # `|| true is suffixed to the command to prevent the job from stopping on merge conflict
+          # This is because git will sent a non-zero exit code when there is a merge conflict
           # We often expect a merge-conflict when there are client/dist file differences
           git merge --no-ff --no-commit $FROM_BRANCH || true
 
