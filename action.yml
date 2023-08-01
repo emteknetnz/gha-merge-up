@@ -170,6 +170,9 @@ runs:
           if [[ $CLIENT_DIFF_FILES != "" ]]; then
             REBUILD=1
           fi
+          echo "CLIENT_DIFF_FILES is:"
+          # The following line is quoted so that newlines show
+          echo "$CLIENT_DIFF_FILES"
           echo "REBUILD is $REBUILD"
 
           # Perform the merge-up
@@ -186,8 +189,6 @@ runs:
             echo "$MERGE_CONFLICTS"
             exit 1
           fi
-          UNMERGED=$(git status | grep "both modified")
-          echo "UNMERGED is $UNMERGED"
 
           # Rebuild client/dist if needed
           if [[ $REBUILD == 1 ]]; then
@@ -223,8 +224,7 @@ runs:
               npm install -g yarn
             fi
 
-            # Get composer name of module rather than just using GITHUB_REPOSITORY
-            # This is so that it's correct when composer installing on a fork
+            # Get composer name of the module
             COMPOSER_NAME=$(jq -r ".name" composer.json)
 
             # Install silverstripe/admin in sibling directory if needed so that shared components are available
@@ -277,7 +277,7 @@ runs:
 
             # Rebuild dist files
             yarn build
-            
+
             # Only add client files
             for FILE in CLIENT_DIFF_FILES; do
               echo "Adding $FILE to commit"
