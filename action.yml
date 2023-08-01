@@ -283,7 +283,7 @@ runs:
             yarn build
 
             # Only add client files
-            for FILE in CLIENT_DIFF_FILES; do
+            for FILE in $CLIENT_DIFF_FILES; do
               echo "Adding $FILE to commit"
               git add $FILE
             done
