@@ -170,6 +170,7 @@ runs:
           if [[ $(git diff --name-only $INTO_BRANCH...$FROM_BRANCH | grep -P ^client/) ]]; then
             REBUILD=1
           fi
+          echo "REBUILD is $REBUILD"
 
           # Perform the merge-up
           # pipe error to /dev/null because git will send and exit code of 1 on merge conflict
@@ -191,6 +192,11 @@ runs:
               exit 1
             fi
             NVM_VERSION=$(cat .nvmrc | xargs)
+            echo "NVM_VERSION is $NVM_VERSION"
+            if [[ $(which nvm) == "" ]]; then
+              ehcho "nvm not found"
+              exit 1
+            fi
             nvm install $NVM_VERSION
             nvm use $NVM_VERSION
             if ! [[ $(which yarn) ]]; then
