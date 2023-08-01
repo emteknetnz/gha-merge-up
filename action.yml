@@ -173,11 +173,12 @@ runs:
           echo "REBUILD is $REBUILD"
 
           # Perform the merge-up
-          # pipe error to /dev/null because git will send and exit code of 1 on merge conflict
-          # however we often expect a merge-conflict when there are client/dist file differences
-          git merge --no-ff --no-commit $FROM_BRANCH &>/dev/null
+          # `|| true is suffixed to the command to preven the job from stopping on merge conflict
+          # because git will sent a non-zero exit code when there is a merge conflict
+          # We often expect a merge-conflict when there are client/dist file differences
+          git merge --no-ff --no-commit $FROM_BRANCH || true
 
-          # Only merge conflicts in client/dist are allowed
+          # Only merge conflicts in client/dist are allowed, stop for all others
           if [[ $(git status | grep "both modified" | grep -v client/dist != "") ]]; then
             echo "Merge conflict found when merging-up $FROM_BRANCH into $INTO_BRANCH. Aborting."
             exit 1
