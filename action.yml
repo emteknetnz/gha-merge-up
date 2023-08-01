@@ -184,6 +184,8 @@ runs:
           echo "DEBUG 1AA"
           git status
           echo "DEBUG 1AB"
+          TESTING=$(git status)
+          echo "DEBUG 1AC"
           $(git status)
           echo "DEBUG 1B"
           $(git status | grep "both modified")
