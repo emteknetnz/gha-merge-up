@@ -194,7 +194,7 @@ runs:
             NVM_VERSION=$(cat .nvmrc | xargs)
             echo "NVM_VERSION is $NVM_VERSION"
             if [[ $(which nvm) == "" ]]; then
-              ehcho "nvm not found"
+              echo "nvm not found"
               exit 1
             fi
             nvm install $NVM_VERSION
