@@ -146,6 +146,7 @@ runs:
       shell: bash
       env:
         BRANCHES: ${{ steps.determine.outputs.branches }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
       run: |
         # Set git user to github-actions bot
         # The 41898282+ email prefixed is the required, matches the ID here
@@ -168,16 +169,35 @@ runs:
           git checkout $FROM_BRANCH
           git checkout $INTO_BRANCH
 
-          # Perform the merge-up
-          git merge --no-ff --no-commit $FROM_BRANCH
+          # Determine if we will rebuild dist file during merge-up
+          # This is based simply on if there are changes in the client/ directory
+          REBUILD=
+          if [[ $(git diff --name-only $INTO_BRANCH...$FROM_BRANCH | grep -P ^client/) ]]; then
+            REBUILD=1
+          fi
 
-          # Check for merge conflicts - this is just an additional check that is probably
-          # not required as git seems like it does the equivalent of exit 1 when it
-          # detects a merge conflict. Still it doesn't hurt to be extra cautious.
-          GIT_STATUS=$(git status)
-          if [[ "$GIT_STATUS" =~ 'Changes not staged for commit' ]]; then
+          # Perform the merge-up
+          # pipe error to /dev/null because git will send and exit code of 1 on merge conflict
+          # however we often expect a merge-conflict when there are client/dist file differences
+          git merge --no-ff --no-commit $FROM_BRANCH &>/dev/null
+
+          # Only merge conflicts in client/dist are allowed
+          if [[ $(git status | grep "both modified" | grep -v client/dist) != "") ]]; then
             echo "Merge conflict found when merging-up $FROM_BRANCH into $INTO_BRANCH. Aborting."
-            exit 1
+          fi
+
+          if [[ $REBUILD == 1 ]; then
+            # Instal silverstripe-admin in sibling directory if needed so that shared components are available
+            if ! [[ $GITHUB_REPOSITORY =~ /silverstripe-admin ]]; then
+              DIR=$(pwd)
+              cd ..
+              git clone https://github.com/silverstripe/silverstripe-admin.git admin
+              # Assumption is that the default branch of admin is the correct one to build against
+              cd admin
+              # yarn comes preinstalled with actions/setup-node
+              yarn install
+              cd $DIR
+            fi
           fi
 
           # Check for any random files that shouldn't be committed
