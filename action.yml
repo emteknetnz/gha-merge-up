@@ -181,7 +181,9 @@ runs:
           # We often expect a merge-conflict when there are client/dist file differences
           git merge --no-ff --no-commit $FROM_BRANCH || true
 
-          echo "DEBUG 1A"
+          echo "DEBUG 1AA"
+          git status
+          echo "DEBUG 1AB"
           $(git status)
           echo "DEBUG 1B"
           $(git status | grep "both modified")
