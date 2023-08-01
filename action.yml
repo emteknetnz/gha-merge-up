@@ -194,9 +194,16 @@ runs:
             fi
             NVM_VERSION=$(cat .nvmrc | xargs)
             echo "NVM_VERSION is $NVM_VERSION"
+
+            # Ensure nvm is installed
             if [[ $(which nvm) == "" ]]; then
-              echo "nvm not found"
-              exit 1
+              wget -q -O __nvm_install.sh https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.4/install.sh
+              if [[ $(sha1sum __nvm_install.sh) != "c10365646e699a74e279e6ae71569430f82ba014  __nvm_install.sh" ]]; then
+                "Unable to verify integrity of nvm install script"
+                exit 1
+              fi
+              . __nvm_install.sh
+              rm __nvm_install.sh
             fi
             nvm install $NVM_VERSION
             nvm use $NVM_VERSION
