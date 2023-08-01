@@ -177,13 +177,13 @@ runs:
           git merge --no-ff --no-commit $FROM_BRANCH &>/dev/null
 
           # Only merge conflicts in client/dist are allowed
-          if [[ $(git status | grep "both modified" | grep -v client/dist) != "") ]]; then
+          if [[ $(git status | grep "both modified" | grep -v client/dist != "") ]]; then
             echo "Merge conflict found when merging-up $FROM_BRANCH into $INTO_BRANCH. Aborting."
             exit 1
           fi
 
           # Rebuild client/dist if needed
-          if [[ $REBUILD == 1 ]; then
+          if [[ $REBUILD == 1 ]]; then
 
             # Ensure .nvmrc is present
             if ! [[ -f .nvmrc ]]; then
