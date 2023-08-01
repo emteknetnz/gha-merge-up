@@ -181,7 +181,7 @@ runs:
           # We often expect a merge-conflict when there are client/dist file differences
           git merge --no-ff --no-commit $FROM_BRANCH || true
 
-          echo "DEBUG"
+          echo "DEBUG 1"
 
           # Only merge conflicts in client/dist are allowed, stop for all others
           MERGE_CONFLICTS=$(git status | grep "both modified" | grep -v client/dist)
@@ -192,8 +192,12 @@ runs:
             exit 1
           fi
 
+          echo "DEBUG 2"
+
           # Rebuild client/dist if needed
           if [[ $REBUILD == 1 ]]; then
+
+            echo "DEBUG 3"
 
             # Ensure .nvmrc is present
             if ! [[ -f .nvmrc ]]; then
