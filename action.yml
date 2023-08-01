@@ -204,6 +204,11 @@ runs:
               fi
               . __nvm_install.sh
               rm __nvm_install.sh
+
+              # Load nvm without needing terminal restart
+              export NVM_DIR="$HOME/.nvm"
+              [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+              [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
             fi
             nvm install $NVM_VERSION
             nvm use $NVM_VERSION
