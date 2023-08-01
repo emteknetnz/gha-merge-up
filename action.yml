@@ -208,7 +208,7 @@ runs:
               ADMIN_VERSION=$(GITHUB_REPOSITORY=$GITHUB_REPOSITORY INTO_BRANCH=$INTO_BRANCH php -r '
                 $GITHUB_REPOSITORY = getenv("GITHUB_REPOSITORY");
                 $INTO_BRANCH = getenv("INTO_BRANCH");
-                $j = [
+                $json = [
                   "require" => [
                     "$GITHUB_REPOSITORY" => "$INTO_BRANCH.x-dev",
                     "silverstripe/recipe-kitchen-sink" => "*"
@@ -216,14 +216,14 @@ runs:
                   "prefer-stable" => false,
                   "minimum-stability" => "dev"
                 ];
-                file_put_contents("composer.json", json_encode($j, JSON_UNESCAPED_SLASHES));
+                file_put_contents("composer.json", json_encode($json, JSON_UNESCAPED_SLASHES));
                 shell_exec("composer update --no-install");
-                $l = json_decode(file_get_contents("composer.lock"), true);
-                $v = array_values(array_filter(
-                  $l["packages"],
+                $lock = json_decode(file_get_contents("composer.lock"), true);
+                $version = array_values(array_filter(
+                  $lock["packages"],
                   fn($p) => $p["name"] === "silverstripe/admin"
                 ))[0]["version"];
-                echo str_replace(".x-dev", "", $v);
+                echo str_replace(".x-dev", "", $version);
               ')
               cd ..
               rm -rf __tmp
@@ -231,6 +231,7 @@ runs:
                 echo "Unable to determine version of silverstripe/admin version to checkout"
                 exit 1
               fi
+              echo "ADMIN_VERSION is $ADMIN_VERSION"
 
               # Install admin if required
               if [[ ! -d admin ]]; then
