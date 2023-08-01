@@ -181,7 +181,13 @@ runs:
           # We often expect a merge-conflict when there are client/dist file differences
           git merge --no-ff --no-commit $FROM_BRANCH || true
 
-          echo "DEBUG 1"
+          echo "DEBUG 1A"
+          $(git status)
+          echo "DEBUG 1B"
+          $(git status | grep "both modified")
+          echo "DEBUG 1C"
+          $(git status | grep "both modified" | grep -v client/dist)
+          echo "DEBUG 1D"
 
           # Only merge conflicts in client/dist are allowed, stop for all others
           MERGE_CONFLICTS=$(git status | grep "both modified" | grep -v client/dist)
