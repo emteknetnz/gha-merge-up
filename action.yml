@@ -141,7 +141,6 @@ runs:
       shell: bash
       env:
         BRANCHES: ${{ steps.determine.outputs.branches }}
-        GITHUB_REPOSITORY: ${{ github.repository }}
       run: |
         # Set git user to github-actions bot
         # The 41898282+ email prefixed is the required, matches the ID here
@@ -210,26 +209,32 @@ runs:
               [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
               [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
             fi
+
+            # Install correct version of node and yarn
             nvm install $NVM_VERSION
             nvm use $NVM_VERSION
-            if ! [[ $(which yarn) ]]; then
+            if [[ $(which yarn) == "" ]]; then
               npm install -g yarn
             fi
 
-            # Install silverstripe-admin in sibling directory if needed so that shared components are available
-            if ! [[ $GITHUB_REPOSITORY =~ /silverstripe-admin ]]; then
+            # Get composer name of module rather than just using GITHUB_REPOSITORY
+            # This is so that it's correct when composer installing on a fork
+            COMPOSER_NAME=$(jq -r ".name" composer.json)
+
+            # Install silverstripe/admin in sibling directory if needed so that shared components are available
+            if [[ $COMPOSER_NAME != silverstripe/admin ]]; then
               DIR=$(pwd)
 
-              # Work out version of admin to checkout
+              # Work out version of silverstripe/admin to checkout
               cd ..
               mkdir __tmp
               cd __tmp
-              ADMIN_VERSION=$(GITHUB_REPOSITORY=$GITHUB_REPOSITORY INTO_BRANCH=$INTO_BRANCH php -r '
-                $GITHUB_REPOSITORY = getenv("GITHUB_REPOSITORY");
+              ADMIN_VERSION=$(COMPOSER_NAME=$COMPOSER_NAME INTO_BRANCH=$INTO_BRANCH php -r '
+                $COMPOSER_NAME = getenv("COMPOSER_NAME");
                 $INTO_BRANCH = getenv("INTO_BRANCH");
                 $json = [
                   "require" => [
-                    "$GITHUB_REPOSITORY" => "$INTO_BRANCH.x-dev",
+                    "$COMPOSER_NAME" => "$INTO_BRANCH.x-dev",
                     "silverstripe/recipe-kitchen-sink" => "*"
                   ],
                   "prefer-stable" => false,
@@ -261,11 +266,11 @@ runs:
               cd admin
               git checkout $ADMIN_VERSION
               yarn install
-
-              # Rebuild dist files
               cd $DIR
-              yarn build
             fi
+
+            # Rebuild dist files
+            yarn build
           fi
 
           # Check for any random files that shouldn't be committed
