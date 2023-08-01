@@ -70,6 +70,7 @@ runs:
           echo "Unable to read list of tags - HTTP response code was $RESP_CODE"
           exit 1
         fi
+        echo "tags=$BRANCHES" >> $GITHUB_OUTPUT
 
         # Download composer.json for use in branches.php
         curl -s -o __composer.json https://raw.githubusercontent.com/$GITHUB_REPOSITORY/$DEFAULT_BRANCH/composer.json
@@ -127,12 +128,6 @@ runs:
               exit 1
             fi
           done
-
-          # Don't allow merge-ups when there are JS changes that would require a yarn build
-          if [[ $(echo "$FILES" | grep client/dist) != "" ]]; then
-            echo "Unable to mergeup between $FROM_BRANCH and $INTO_BRANCH - there are changes to JS dist files"
-            exit 1
-          fi
         done
 
     # actions/checkout with fetch-depth: 0 will fetch ALL git history for the repository
@@ -184,19 +179,72 @@ runs:
           # Only merge conflicts in client/dist are allowed
           if [[ $(git status | grep "both modified" | grep -v client/dist) != "") ]]; then
             echo "Merge conflict found when merging-up $FROM_BRANCH into $INTO_BRANCH. Aborting."
+            exit 1
           fi
 
+          # Rebuild client/dist if needed
           if [[ $REBUILD == 1 ]; then
-            # Instal silverstripe-admin in sibling directory if needed so that shared components are available
+
+            # Ensure .nvmrc is present
+            if ! [[ -f .nvmrc ]]; then
+              echo "Unable to find .nvmrc file"
+              exit 1
+            fi
+            NVM_VERSION=$(cat .nvmrc | xargs)
+            nvm install $NVM_VERSION
+            nvm use $NVM_VERSION
+            if ! [[ $(which yarn) ]]; then
+              npm install -g yarn
+            fi
+
+            # Install silverstripe-admin in sibling directory if needed so that shared components are available
             if ! [[ $GITHUB_REPOSITORY =~ /silverstripe-admin ]]; then
               DIR=$(pwd)
+
+              # Work out version of admin to checkout
               cd ..
-              git clone https://github.com/silverstripe/silverstripe-admin.git admin
-              # Assumption is that the default branch of admin is the correct one to build against
+              mkdir __tmp
+              cd __tmp
+              ADMIN_VERSION=$(GITHUB_REPOSITORY=$GITHUB_REPOSITORY INTO_BRANCH=$INTO_BRANCH php -r '
+                $GITHUB_REPOSITORY = getenv("GITHUB_REPOSITORY");
+                $INTO_BRANCH = getenv("INTO_BRANCH");
+                $j = [
+                  "require" => [
+                    "$GITHUB_REPOSITORY" => "$INTO_BRANCH.x-dev",
+                    "silverstripe/recipe-kitchen-sink" => "*"
+                  ],
+                  "prefer-stable" => false,
+                  "minimum-stability" => "dev"
+                ];
+                file_put_contents("composer.json", json_encode($j, JSON_UNESCAPED_SLASHES));
+                shell_exec("composer update --no-install");
+                $l = json_decode(file_get_contents("composer.lock"), true);
+                $v = array_values(array_filter(
+                  $l["packages"],
+                  fn($p) => $p["name"] === "silverstripe/admin"
+                ))[0]["version"];
+                echo str_replace(".x-dev", "", $v);
+              ')
+              cd ..
+              rm -rf __tmp
+              if [[ $ADMIN_VERSION == "" ]]; then
+                echo "Unable to determine version of silverstripe/admin version to checkout"
+                exit 1
+              fi
+
+              # Install admin if required
+              if [[ ! -d admin ]]; then
+                git clone https://github.com/silverstripe/silverstripe-admin.git admin
+              fi
+
+              # Checkout admin version
               cd admin
-              # yarn comes preinstalled with actions/setup-node
+              git checkout $ADMIN_VERSION
               yarn install
+
+              # Rebuild dist files
               cd $DIR
+              yarn build
             fi
           fi
 
