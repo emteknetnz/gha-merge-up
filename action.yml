@@ -190,12 +190,8 @@ runs:
             exit 1
           fi
 
-          echo "DEBUG 2"
-
           # Rebuild client/dist if needed
           if [[ $REBUILD == 1 ]]; then
-
-            echo "DEBUG 3"
 
             # Ensure .nvmrc is present
             if ! [[ -f .nvmrc ]]; then
@@ -289,9 +285,19 @@ runs:
             done
           fi
 
+          GIT_STATUS=$(git status)
+
+          # Check for any unmerged files
+          if [[ "$GIT_STATUS" =~ 'Unmerged paths' ]]; then
+            echo "Unmerged files found when merging-up $FROM_BRANCH into $INTO_BRANCH. Aborting."
+            echo $GIT_STATUS
+            exit 1
+          fi
+
           # Check for any random files that shouldn't be committed
           if [[ "$GIT_STATUS" =~ 'Untracked files' ]]; then
             echo "Untracked files found when merging-up $FROM_BRANCH into $INTO_BRANCH. Aborting."
+            echo $GIT_STATUS
             exit 1
           fi
 
@@ -302,8 +308,11 @@ runs:
           fi
 
           # Commit and push the merge-up
-          # --no-edit in the context of a merge commit uses the default auto-generated commit message.
-          git commit --no-edit
+          # The quotes in the commit message are intential and match the auto-generated
+          # title of e.g. Merge branch '2.0' into 2
+          # Using this instead of simply `git status --no-edit` which auto-generates a commit message because
+          # that includes commented out details of the merge conflict if there was one
+          git commit -m "Merge branch '$FROM_BRANCH' into $INTO_BRANCH"
           git push origin $INTO_BRANCH
           echo "Succesfully merged-up $FROM_BRANCH into $INTO_BRANCH"
         done
