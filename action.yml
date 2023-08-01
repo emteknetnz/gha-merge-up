@@ -166,7 +166,8 @@ runs:
           # Determine if we will rebuild dist file during merge-up
           # This is based simply on if there are changes in the client/ directory
           REBUILD=
-          if [[ $(git diff --name-only $INTO_BRANCH...$FROM_BRANCH | grep -P ^client/) ]]; then
+          CLIENT_DIFF_FILES=$(git diff --name-only $INTO_BRANCH...$FROM_BRANCH | grep -P ^client/)
+          if [[ $CLIENT_DIFF_FILES != "" ]]; then
             REBUILD=1
           fi
           echo "REBUILD is $REBUILD"
@@ -178,10 +179,15 @@ runs:
           git merge --no-ff --no-commit $FROM_BRANCH || true
 
           # Only merge conflicts in client/dist are allowed, stop for all others
-          if [[ $(git status | grep "both modified" | grep -v client/dist != "") ]]; then
+          MERGE_CONFLICTS=$(git status | grep "both modified" | grep -v client/dist != "")
+          if [[ $MERGE_CONFLICTS != "" ]]; then
             echo "Merge conflict found when merging-up $FROM_BRANCH into $INTO_BRANCH. Aborting."
+            # The following line needs to be quoted so that line breaks show
+            echo "$MERGE_CONFLICTS"
             exit 1
           fi
+          UNMERGED=$(git status | grep "both modified")
+          echo "UNMERGED is $UNMERGED"
 
           # Rebuild client/dist if needed
           if [[ $REBUILD == 1 ]]; then
@@ -271,6 +277,12 @@ runs:
 
             # Rebuild dist files
             yarn build
+            
+            # Only add client files
+            for FILE in CLIENT_DIFF_FILES; do
+              echo "Adding $FILE to commit"
+              git add $FILE
+            done
           fi
 
           # Check for any random files that shouldn't be committed
