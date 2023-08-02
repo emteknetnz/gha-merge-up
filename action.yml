@@ -165,7 +165,7 @@ runs:
 
           # Determine if we will rebuild dist file during merge-up
           # This is based simply on if there are changes in the client/ directory
-          REBUILD=
+          REBUILD=0
           CLIENT_DIFF_FILES=$(git diff --name-only $INTO_BRANCH...$FROM_BRANCH | grep -P ^client/)
           if [[ $CLIENT_DIFF_FILES != "" ]]; then
             REBUILD=1
@@ -182,11 +182,12 @@ runs:
           git merge --no-ff --no-commit $FROM_BRANCH || true
 
           # Only merge conflicts in client/dist are allowed, stop for all others
-          MERGE_CONFLICTS=$(git status | grep "both modified" | grep -v client/dist) || true
-          if [[ $MERGE_CONFLICTS != "" ]]; then
+          # See https://git-scm.com/docs/git-status#_output for information on the porcelain format
+          UNMERGED_FILES=$(git status --porcelain=v1 | grep -P '^(DD|AU|UD|UA|DU|AA|UU)' | grep -v client/dist) || true
+          if [[ $UNMERGED_FILES != "" ]]; then
             echo "Merge conflict found when merging-up $FROM_BRANCH into $INTO_BRANCH. Aborting."
             # The following line needs to be quoted so that line breaks show
-            echo "$MERGE_CONFLICTS"
+            echo "$UNMERGED_FILES"
             exit 1
           fi
 
@@ -198,6 +199,7 @@ runs:
               echo "Unable to find .nvmrc file"
               exit 1
             fi
+            # Piping into xargs trims out whitespace
             NVM_VERSION=$(cat .nvmrc | xargs)
             echo "NVM_VERSION is $NVM_VERSION"
 
@@ -214,7 +216,6 @@ runs:
               # Load nvm without needing terminal restart
               export NVM_DIR="$HOME/.nvm"
               [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-              [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
             fi
 
             # Install correct version of node and yarn
@@ -255,13 +256,13 @@ runs:
                 ))[0]["version"];
                 echo str_replace(".x-dev", "", $version);
               ')
-              cd ..
-              rm -rf __tmp
-              if [[ $ADMIN_VERSION == "" ]]; then
-                echo "Unable to determine version of silverstripe/admin version to checkout"
+              echo "ADMIN_VERSION is $ADMIN_VERSION"
+              if ! [[ $ADMIN_VERSION =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+                echo "Unable to determine major or minor branch of silverstripe/admin version to checkout"
                 exit 1
               fi
-              echo "ADMIN_VERSION is $ADMIN_VERSION"
+              cd ..
+              rm -rf __tmp
 
               # Install admin if required
               if [[ ! -d admin ]]; then
@@ -279,30 +280,30 @@ runs:
             yarn build
 
             # Only add client files
-            for FILE in $CLIENT_DIFF_FILES; do
-              echo "Adding $FILE to commit"
-              git add $FILE
-            done
+            git add client/dist
           fi
 
-          GIT_STATUS=$(git status)
+          # See https://git-scm.com/docs/git-status#_output for information on the porcelain format
+          GIT_STATUS=$(git status --porcelain=v1)
 
           # Check for any unmerged files
-          if [[ "$GIT_STATUS" =~ 'Unmerged paths' ]]; then
+          UNMERGED_FILES=$(echo "$GIT_STATUS" | grep -P '^(DD|AU|UD|UA|DU|AA|UU)') || true
+          if [[ $UNMERGED_FILES != "" ]]; then
             echo "Unmerged files found when merging-up $FROM_BRANCH into $INTO_BRANCH. Aborting."
-            echo $GIT_STATUS
+            echo "$UNMERGED_FILES"
             exit 1
           fi
 
-          # Check for any random files that shouldn't be committed
-          if [[ "$GIT_STATUS" =~ 'Untracked files' ]]; then
+          # Check for any random untracked files that shouldn't be committed
+          UNTRACKED_FILES=$(echo "$GIT_STATUS" | grep -P '^\?') || true
+          if [[ $UNTRACKED_FILES != "" ]]; then
             echo "Untracked files found when merging-up $FROM_BRANCH into $INTO_BRANCH. Aborting."
-            echo $GIT_STATUS
+            echo "$UNTRACKED_FILES"
             exit 1
           fi
 
           # Continue if there's nothing to commit
-          if [[ "$GIT_STATUS" =~ 'nothing to commit, working tree clean' ]]; then
+          if [[ $GIT_STATUS == "" ]]; then
             echo "No changes found when merging-up $FROM_BRANCH into $INTO_BRANCH. Skipping."
             continue
           fi
