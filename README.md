@@ -12,4 +12,6 @@ steps:
 ```
 
 This action has no inputs
+
+.
 .
