@@ -264,7 +264,7 @@ runs:
           # `|| true is suffixed to the command to prevent the job from stopping on merge conflict
           # This is because git will sent a non-zero exit code when there is a merge conflict
           # We often expect a merge-conflict when there are client/dist file differences
-          git merge --no-ff --no-commit $FROM_BRANCH || true
+          MERGE_RESULT=$(git merge --no-ff --no-commit $FROM_BRANCH || true)
 
           # Only merge conflicts in client/dist are allowed, stop for all others
           # See https://git-scm.com/docs/git-status#_output for information on the porcelain format
@@ -385,6 +385,12 @@ runs:
             echo "Untracked files found when merging-up $FROM_BRANCH into $INTO_BRANCH. Aborting."
             echo "$UNTRACKED_FILES"
             exit 1
+          fi
+
+          # Things are update to up to date, so do not commit
+          if [[ $MERGE_RESULT =~ "Already up to date" ]]; then
+            echo "Merge result said things are already up to date. Skipping."
+            continue
           fi
 
           # Commit and push the merge-up
