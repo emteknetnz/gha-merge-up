@@ -235,8 +235,16 @@ runs:
           # when running a failed job though that's still a valid scenario
           git checkout $FROM_BRANCH
           git pull
+          FROM_BRANCH_SHA=$(git rev-parse HEAD)
           git checkout $INTO_BRANCH
           git pull
+          INTO_BRANCH_SHA=$(git rev-parse HEAD)
+
+          # If both branches are on the same sha, there's nothing to do
+          if [[ $FROM_BRANCH_SHA == $INTO_BRANCH_SHA ]]; then
+            echo "$FROM_BRANCH and $INTO_BRANCH both have the sha $FROM_BRANCH_SHA. Skipping."
+            continue
+          fi
 
           # Determine if we will rebuild dist file during merge-up
           # This is based simply on if there are changes in the client/ directory and if there's a package.json file
@@ -375,12 +383,6 @@ runs:
             echo "Untracked files found when merging-up $FROM_BRANCH into $INTO_BRANCH. Aborting."
             echo "$UNTRACKED_FILES"
             exit 1
-          fi
-
-          # Continue if there's nothing to commit
-          if [[ $GIT_STATUS == "" ]]; then
-            echo "No changes found when merging-up $FROM_BRANCH into $INTO_BRANCH. Skipping."
-            continue
           fi
 
           # Commit and push the merge-up
