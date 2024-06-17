@@ -236,17 +236,17 @@ runs:
           git checkout $FROM_BRANCH
           git pull
           FROM_BRANCH_SHA=$(git rev-parse HEAD)
+          echo "FROM_BRANCH $FROM_BRANCH sha is $FROM_BRANCH_SHA"
           git checkout $INTO_BRANCH
           git pull
           INTO_BRANCH_SHA=$(git rev-parse HEAD)
+          echo "INTO_BRANCH $INTO_BRANCH sha is $INTO_BRANCH_SHA"
 
           # If both branches are on the same sha, there's nothing to do
           if [[ $FROM_BRANCH_SHA == $INTO_BRANCH_SHA ]]; then
-            echo "FROM_BRANCH $FROM_BRANCH and INTO_BRANCH $INTO_BRANCH have the same sha $FROM_BRANCH_SHA. Skipping."
+            echo "FROM_BRANCH $FROM_BRANCH and INTO_BRANCH $INTO_BRANCH have the same sha. Skipping."
             continue
           fi
-          echo "FROM_BRANCH $FROM_BRANCH sha is $FROM_BRANCH_SHA"
-          echo "INTO_BRANCH $INTO_BRANCH sha is $INTO_BRANCH_SHA"
 
           # Determine if we will rebuild dist file during merge-up
           # This is based simply on if there are changes in the client/ directory and if there's a package.json file
